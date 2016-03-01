@@ -20,15 +20,14 @@ struct MyArray<Element> : CustomStringConvertible {
         return mutableDescription
     }
     
-    private var dataRepresentation: NSMutableData!
+    private let dataRepresentation: NSMutableData!
     
-    init(element: Element) {
-        var copyElement = element
-        dataRepresentation = NSMutableData(bytes: &copyElement, length: sizeof(Element))
+    init() {
+        dataRepresentation = NSMutableData()
     }
     
     init(elements: Element ...) {
-        dataRepresentation = NSMutableData()
+        self.init()
         for element in elements {
             append(element)
         }
@@ -36,80 +35,59 @@ struct MyArray<Element> : CustomStringConvertible {
     
     private var elementLength: Int { return sizeof(Element) }
     
-    var numberOfElements: Int { return dataRepresentation.length / elementLength }
+    var count: Int { return dataRepresentation.length / elementLength }
     
-    subscript (index: Int) -> Element {
-        return elementAtIndex(index)
-    }
-    
-    var count: Int { return numberOfElements }
-    
-    var elements: MyArray<Element> {
-        return self
+    subscript(index: Int) -> Element {
+        get {
+            return elementAtIndex(index)
+        }
+        set {
+            insert(newValue, toIndex: index)
+        }
     }
     
     func elementAtIndex(index: Int) -> Element {
-        let subdata = dataRepresentation.subdataWithRange(NSRange(location: index * elementLength, length:
-            elementLength))
+        let subdata = dataRepresentation.subdataWithRange(NSRange(location: index * elementLength, length: elementLength))
         return UnsafeMutablePointer<Element>(subdata.bytes).memory
     }
     
     mutating func append(element: Element) {
         var copyElement = element
-        dataRepresentation.appendBytes(&copyElement, length: sizeof(Element))
+        dataRepresentation.appendBytes(&copyElement, length: elementLength)
     }
     
     mutating func insert(element: Element, toIndex index: Int) {
         var newElement = element
-        func adjustIndex(oldIndex: Int) -> Int {
-            if oldIndex < index {
-                return oldIndex
-            } else {
-                return oldIndex + 1
-            }
-        }
-        
         let newData = NSMutableData()
-        for i in 0..<numberOfElements {
+        for i in 0..<count {
             if index == i {
                 newData.appendBytes(&newElement, length: elementLength)
             }
             var copyElement = elementAtIndex(i)
-            newData.appendData(NSMutableData(bytes: &copyElement, length: sizeof(Element)))
+            newData.appendData(NSMutableData(bytes: &copyElement, length: elementLength))
         }
-        dataRepresentation = newData
+        dataRepresentation.setData(newData)
     }
     
     mutating func removeElementAtIndex(index: Int) {
         let newData = NSMutableData()
-        for i in 0..<numberOfElements {
+        for i in 0..<count {
             if index != i {
                 var copyElement = elementAtIndex(i)
-                newData.appendData(NSMutableData(bytes: &copyElement, length: sizeof(Element)))
+                newData.appendData(NSMutableData(bytes: &copyElement, length: elementLength))
             }
         }
-        dataRepresentation = newData
-
+        dataRepresentation.setData(newData)
     }
 }
 
-var array = MyArray(elements: "test1", "test2")
-array.append("2")
+var array = MyArray(elements: "1", "2")
 array.append("3")
-
-let pokus = array.elements
-
+array.append("4")
 array.insert("new 1", toIndex: 0)
-let pokus2 = array.elements
-
-array.insert("new 3", toIndex: 3)
-
-let pokus3 = array.elements
-let pokus3count = array.elements.count
-
+array[3] = "new 3"
+let p = array
 array.removeElementAtIndex(0)
 
-let pokus4 = array.elements
-
+let pokus4 = array
 let pokus5 = array[0]
-
